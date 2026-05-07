@@ -1,0 +1,160 @@
+/* Общий стиль страницы */
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #000000, #8b0000);
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+}
+
+/* Форма */
+form {
+    background: #111111;
+    max-width: 650px;
+    margin: 50px auto;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(255, 0, 0, 0.25);
+    border: 1px solid #550000;
+}
+
+/* Заголовок */
+h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #ff4d4d;
+}
+
+/* Поля */
+input:not([type="radio"]):not([type="checkbox"]),
+select,
+textarea {
+    width: 100%;
+    padding: 10px 12px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    border: 1px solid #660000;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: 0.3s;
+    box-sizing: border-box;
+    background: #1a1a1a;
+    color: #ffffff;
+}
+
+/* Фокус */
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: #ff1a1a;
+    outline: none;
+    box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+}
+
+/* Текстовое поле */
+textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* Select */
+select {
+    height: 140px;
+}
+
+/* Радио и чекбокс */
+input[type="radio"],
+input[type="checkbox"] {
+    margin-right: 6px;
+}
+
+/* Группа пола */
+.gender-group {
+    display: flex;
+    gap: 25px;
+    margin-top: 8px;
+}
+
+.gender-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    color: #dddddd;
+}
+
+/* Кнопка */
+button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #990000, #ff1a1a);
+    color: white;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #cc0000, #ff3333);
+    transform: scale(1.02);
+}
+
+/* Ошибки */
+.error {
+    border: 2px solid #ff0000 !important;
+}
+
+.error-text {
+    color: #ff4d4d;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+/* Успех */
+.success {
+    text-align: center;
+    background: #220000;
+    color: #ff6666;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #990000;
+}
+
+/* Блок с логином и паролем */
+.credentials {
+    background: #1a0000;
+    color: #ff9999;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #990000;
+}
+
+.credentials strong {
+    display: block;
+    margin-top: 5px;
+}
+
+/* Блок авторизации */
+.auth-box {
+    max-width: 400px;
+    margin: 30px auto;
+    background: #111111;
+    padding: 20px 25px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(255, 0, 0, 0.2);
+    border: 1px solid #550000;
+}
+
+.auth-box h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #ff4d4d;
+}
+
+.auth-box input {
+    margin-bottom: 15px;
+}

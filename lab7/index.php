@@ -31,6 +31,18 @@ if (isset($_COOKIE["success"])) {
 <head>
 <meta charset="UTF-8">
 <title>Форма</title>
+
+<link rel="stylesheet" href="style.css">
+
+<style>
+.credentials {
+    background:#111;
+    color:#fff;
+    padding:10px;
+    margin-bottom:15px;
+    border-radius:8px;
+}
+</style>
 </head>
 
 <body>

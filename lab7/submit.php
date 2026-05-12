@@ -24,7 +24,8 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $errors['email'] = "Некорректный email";
 }
 
-if (mb_strlen($biography) > 1000) {
+/* исправлено */
+if (strlen($biography) > 1000) {
     $errors['biography'] = "Слишком длинная биография";
 }
 

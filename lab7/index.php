@@ -3,58 +3,26 @@ session_start();
 
 require 'db.php';
 
-ini_set('display_errors', 0);
-
+/* CSRF */
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $errors = [];
 $values = [];
-$success = false;
 
 if (isset($_COOKIE["errors"])) {
-    $errors = json_decode($_COOKIE["errors"], true);
+    $errors = json_decode($_COOKIE["errors"], true) ?? [];
     setcookie("errors", "", time() - 3600, "/");
 }
 
 if (isset($_COOKIE["values"])) {
-    $values = json_decode($_COOKIE["values"], true);
+    $values = json_decode($_COOKIE["values"], true) ?? [];
     setcookie("values", "", time() - 3600, "/");
 }
 
 if (isset($_COOKIE["success"])) {
-    $success = true;
     setcookie("success", "", time() - 3600, "/");
-}
-
-$user = null;
-$languages_user = [];
-
-if (isset($_SESSION['user_id'])) {
-
-    $stmt = $pdo->prepare("
-        SELECT *
-        FROM application
-        WHERE id=?
-    ");
-
-    $stmt->execute([$_SESSION['user_id']]);
-
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    $stmt = $pdo->prepare("
-        SELECT language_id
-        FROM application_language
-        WHERE application_id=?
-    ");
-
-    $stmt->execute([$_SESSION['user_id']]);
-
-    $languages_user = array_column(
-        $stmt->fetchAll(PDO::FETCH_ASSOC),
-        'language_id'
-    );
 }
 ?>
 
@@ -63,57 +31,78 @@ if (isset($_SESSION['user_id'])) {
 <head>
 <meta charset="UTF-8">
 <title>Форма</title>
-
-<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+<?php if (isset($_SESSION['generated_login'])): ?>
+    <div style="background:#eee;padding:10px;margin-bottom:10px;">
+        <b>Ваши данные:</b><br>
+        Логин: <?= htmlspecialchars($_SESSION['generated_login']) ?><br>
+        Пароль: <?= htmlspecialchars($_SESSION['generated_password']) ?>
+    </div>
+
+    <?php
+    unset($_SESSION['generated_login'], $_SESSION['generated_password']);
+    ?>
+<?php endif; ?>
+
 <form method="POST" action="submit.php">
 
-<input
-    type="hidden"
-    name="csrf_token"
-    value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>"
->
+<input type="hidden" name="csrf_token"
+       value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
 
-<h2>Форма заявки</h2>
+<h2>Форма</h2>
 
-<?php if ($success): ?>
-<div class="success">
-    Заявка успешно отправлена
-</div>
-<?php endif; ?>
+<input type="text" name="fio" placeholder="ФИО"
+       value="<?= htmlspecialchars($values['fio'] ?? '') ?>">
 
-<label>ФИО</label>
+<br><br>
 
-<input
-    type="text"
-    name="fio"
-    value="<?= htmlspecialchars($user['fio'] ?? $values['fio'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
->
+<input type="text" name="phone" placeholder="Телефон"
+       value="<?= htmlspecialchars($values['phone'] ?? '') ?>">
 
-<?php if (isset($errors['fio'])): ?>
-<div class="error-text">
-    <?= htmlspecialchars($errors['fio']) ?>
-</div>
-<?php endif; ?>
+<br><br>
 
-<label>Email</label>
+<input type="email" name="email" placeholder="Email"
+       value="<?= htmlspecialchars($values['email'] ?? '') ?>">
 
-<input
-    type="email"
-    name="email"
-    value="<?= htmlspecialchars($user['email'] ?? $values['email'] ?? '', ENT_QUOTES, 'UTF-8') ?>"
->
+<br><br>
 
-<label>Биография</label>
+<input type="date" name="birthdate">
 
-<textarea name="biography"><?= htmlspecialchars($user['biography'] ?? $values['biography'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
+<br><br>
 
-<button type="submit">
-    Сохранить
-</button>
+<label>
+<input type="radio" name="gender" value="1"> Муж
+</label>
+
+<label>
+<input type="radio" name="gender" value="2"> Жен
+</label>
+
+<br><br>
+
+<select name="languages[]" multiple>
+    <option value="1">PHP</option>
+    <option value="2">C++</option>
+    <option value="3">JS</option>
+</select>
+
+<br><br>
+
+<textarea name="biography"></textarea>
+
+<br><br>
+
+<label>
+<input type="checkbox" name="contract">
+Согласен
+</label>
+
+<br><br>
+
+<button type="submit">Отправить</button>
 
 </form>
 

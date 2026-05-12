@@ -1,33 +1,67 @@
 <?php
 session_start();
 
-require 'db.php';
-
-/* CSRF */
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
 $errors = [];
 $values = [];
+$success = false;
 
+/* cookies */
 if (isset($_COOKIE["errors"])) {
-    $errors = json_decode($_COOKIE["errors"], true) ?? [];
+    $errors = json_decode($_COOKIE["errors"], true);
     setcookie("errors", "", time() - 3600, "/");
 }
 
 if (isset($_COOKIE["values"])) {
-    $values = json_decode($_COOKIE["values"], true) ?? [];
+    $values = json_decode($_COOKIE["values"], true);
     setcookie("values", "", time() - 3600, "/");
 }
 
 if (isset($_COOKIE["success"])) {
+    $success = true;
     setcookie("success", "", time() - 3600, "/");
+}
+
+/* пользователь */
+$user = null;
+$languages_user = [];
+
+if (isset($_SESSION['user_id'])) {
+
+    /* подключение оставлено как в первом файле */
+    $pdo = new PDO(
+        'mysql:host=localhost;dbname=u82377',
+        'u82377',
+        '4d$TFWRr3'
+    );
+
+    $stmt = $pdo->prepare("
+        SELECT *
+        FROM application
+        WHERE id=?
+    ");
+
+    $stmt->execute([$_SESSION['user_id']]);
+
+    $user = $stmt->fetch();
+
+    $stmt = $pdo->prepare("
+        SELECT language_id
+        FROM application_language
+        WHERE application_id=?
+    ");
+
+    $stmt->execute([$_SESSION['user_id']]);
+
+    $languages_user = array_column(
+        $stmt->fetchAll(),
+        'language_id'
+    );
 }
 ?>
 
 <!DOCTYPE html>
 <html>
+
 <head>
 <meta charset="UTF-8">
 <title>Форма</title>
@@ -35,86 +69,295 @@ if (isset($_COOKIE["success"])) {
 <link rel="stylesheet" href="style.css">
 
 <style>
-.credentials {
-    background:#111;
-    color:#fff;
-    padding:10px;
-    margin-bottom:15px;
-    border-radius:8px;
+
+/* верхняя панель */
+.top-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px 30px;
 }
+
+/* форма входа */
+.login-inline {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.login-inline input {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+/* блок с логином и паролем */
+.credentials {
+    position: absolute;
+    right: 30px;
+    top: 70px;
+    background: #fff3cd;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
 </style>
 </head>
 
 <body>
 
-<?php if (isset($_SESSION['generated_login'])): ?>
-    <div style="background:#eee;padding:10px;margin-bottom:10px;">
-        <b>Ваши данные:</b><br>
-        Логин: <?= htmlspecialchars($_SESSION['generated_login']) ?><br>
-        Пароль: <?= htmlspecialchars($_SESSION['generated_password']) ?>
+<div class="top-bar">
+
+<?php if (!isset($_SESSION['user_id'])): ?>
+
+    <form
+        method="POST"
+        action="login.php"
+        class="login-inline"
+    >
+
+        <input
+            type="text"
+            name="login"
+            placeholder="Логин"
+        >
+
+        <input
+            type="password"
+            name="password"
+            placeholder="Пароль"
+        >
+
+        <button>Войти</button>
+
+    </form>
+
+<?php else: ?>
+
+    <div>
+        Вы вошли как
+        <b><?= htmlspecialchars($user['login'] ?? '') ?></b>
+
+        <a href="logout.php">Выйти</a>
     </div>
 
-    <?php
-    unset($_SESSION['generated_login'], $_SESSION['generated_password']);
-    ?>
 <?php endif; ?>
+
+</div>
+
+<?php if (isset($_SESSION['generated_login'])): ?>
+
+<div class="credentials">
+
+    <b>Ваши данные:</b><br>
+
+    Логин:
+    <?= $_SESSION['generated_login'] ?><br>
+
+    Пароль:
+    <?= $_SESSION['generated_password'] ?>
+
+</div>
+
+<?php
+unset(
+    $_SESSION['generated_login'],
+    $_SESSION['generated_password']
+);
+endif;
+?>
 
 <form method="POST" action="submit.php">
 
-<input type="hidden" name="csrf_token"
-       value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+<h2>Форма заявки</h2>
 
-<h2>Форма</h2>
+<?php if ($success): ?>
 
-<input type="text" name="fio" placeholder="ФИО"
-       value="<?= htmlspecialchars($values['fio'] ?? '') ?>">
+<div class="success">
+    Заявка успешно отправлена ✅
+</div>
 
-<br><br>
+<?php endif; ?>
 
-<input type="text" name="phone" placeholder="Телефон"
-       value="<?= htmlspecialchars($values['phone'] ?? '') ?>">
+<label>ФИО</label>
 
-<br><br>
+<input
+    type="text"
+    name="fio"
+    value="<?= htmlspecialchars($user['fio'] ?? $values['fio'] ?? '') ?>"
+    class="<?= isset($errors['fio']) ? 'error' : '' ?>"
+>
 
-<input type="email" name="email" placeholder="Email"
-       value="<?= htmlspecialchars($values['email'] ?? '') ?>">
+<?php if (isset($errors['fio'])): ?>
 
-<br><br>
+<div class="error-text">
+    <?= $errors['fio'] ?>
+</div>
 
-<input type="date" name="birthdate">
+<?php endif; ?>
 
-<br><br>
+<label>Телефон</label>
+
+<input
+    type="tel"
+    name="phone"
+    value="<?= htmlspecialchars($user['phone'] ?? $values['phone'] ?? '') ?>"
+    class="<?= isset($errors['phone']) ? 'error' : '' ?>"
+>
+
+<?php if (isset($errors['phone'])): ?>
+
+<div class="error-text">
+    <?= $errors['phone'] ?>
+</div>
+
+<?php endif; ?>
+
+<label>Email</label>
+
+<input
+    type="email"
+    name="email"
+    value="<?= htmlspecialchars($user['email'] ?? $values['email'] ?? '') ?>"
+    class="<?= isset($errors['email']) ? 'error' : '' ?>"
+>
+
+<?php if (isset($errors['email'])): ?>
+
+<div class="error-text">
+    <?= $errors['email'] ?>
+</div>
+
+<?php endif; ?>
+
+<label>Дата рождения</label>
+
+<input
+    type="date"
+    name="birthdate"
+    value="<?= htmlspecialchars($user['birthdate'] ?? $values['birthdate'] ?? '') ?>"
+>
+
+<label>Пол</label>
+
+<div class="gender-group">
 
 <label>
-<input type="radio" name="gender" value="1"> Муж
+    <input
+        type="radio"
+        name="gender"
+        value="1"
+        <?= (($user['gender'] ?? $values['gender'] ?? '') == '1') ? 'checked' : '' ?>
+    >
+    Мужской
 </label>
 
 <label>
-<input type="radio" name="gender" value="2"> Жен
+    <input
+        type="radio"
+        name="gender"
+        value="2"
+        <?= (($user['gender'] ?? $values['gender'] ?? '') == '2') ? 'checked' : '' ?>
+    >
+    Женский
 </label>
 
-<br><br>
+</div>
 
-<select name="languages[]" multiple>
-    <option value="1">PHP</option>
-    <option value="2">C++</option>
-    <option value="3">JS</option>
+<?php if (isset($errors['gender'])): ?>
+
+<div class="error-text">
+    <?= $errors['gender'] ?>
+</div>
+
+<?php endif; ?>
+
+<label>Любимые языки</label>
+
+<select
+    name="languages[]"
+    multiple
+    class="<?= isset($errors['languages']) ? 'error' : '' ?>"
+>
+
+<?php
+
+$languages = [
+    1 => "Pascal",
+    2 => "C",
+    3 => "C++",
+    4 => "JS",
+    5 => "PHP",
+    6 => "Python"
+];
+
+foreach ($languages as $id => $name):
+
+$selected = in_array(
+    $id,
+    $languages_user ?? ($values['languages'] ?? [])
+)
+? "selected"
+: "";
+
+?>
+
+<option value="<?= $id ?>" <?= $selected ?>>
+    <?= $name ?>
+</option>
+
+<?php endforeach; ?>
+
 </select>
 
-<br><br>
+<?php if (isset($errors['languages'])): ?>
 
-<textarea name="biography"></textarea>
+<div class="error-text">
+    <?= $errors['languages'] ?>
+</div>
 
-<br><br>
+<?php endif; ?>
+
+<label>Биография</label>
+
+<textarea
+    name="biography"
+    class="<?= isset($errors['biography']) ? 'error' : '' ?>"
+><?= htmlspecialchars($user['biography'] ?? $values['biography'] ?? '') ?></textarea>
+
+<?php if (isset($errors['biography'])): ?>
+
+<div class="error-text">
+    <?= $errors['biography'] ?>
+</div>
+
+<?php endif; ?>
 
 <label>
-<input type="checkbox" name="contract">
-Согласен
+
+<input
+    type="checkbox"
+    name="contract"
+    <?= ($user['contract'] ?? $values['contract'] ?? false) ? "checked" : "" ?>
+>
+
+С контрактом ознакомлен
+
 </label>
+
+<?php if (isset($errors['contract'])): ?>
+
+<div class="error-text">
+    <?= $errors['contract'] ?>
+</div>
+
+<?php endif; ?>
 
 <br><br>
 
-<button type="submit">Отправить</button>
+<button type="submit">
+    Сохранить
+</button>
 
 </form>
 

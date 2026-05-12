@@ -1,44 +1,59 @@
 <?php
-session_start();
+session_start(); // LAB7 ADDED
 
-require 'db.php';
+$errors = [];
+$values = $_POST;
 
-/* CSRF */
-if (
-    empty($_POST['csrf_token']) ||
-    !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-) {
-    die('CSRF error');
-}
-
-/* данные */
-$fio = trim($_POST['fio'] ?? '');
-$phone = trim($_POST['phone'] ?? '');
-$email = trim($_POST['email'] ?? '');
-$birthdate = $_POST['birthdate'] ?: null;
+$fio = $_POST['fio'] ?? '';
+$phone = $_POST['phone'] ?? '';
+$email = $_POST['email'] ?? '';
+$birthdate = $_POST['birthdate'] ?? '';
 $gender = $_POST['gender'] ?? '';
-$biography = trim($_POST['biography'] ?? '');
+$biography = $_POST['biography'] ?? '';
 $languages = $_POST['languages'] ?? [];
 $contract = isset($_POST['contract']);
 
-$errors = [];
+//валидация
+if (!preg_match("/^[a-zA-Zа-яА-Я\s]{1,150}$/u", $fio)) {
+    $errors['fio'] = "Допустимы только буквы и пробелы";
+}
 
-/* валидация */
-if ($fio === '') $errors['fio'] = 'fio';
-if ($phone === '') $errors['phone'] = 'phone';
-if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['email'] = 'email';
-if (!in_array($gender, ['1','2'])) $errors['gender'] = 'gender';
-if (!$contract) $errors['contract'] = 'contract';
-if (strlen($biography) > 1000) $errors['biography'] = 'bio';
+if (!preg_match("/^\+?[0-9\s\-]{7,20}$/", $phone)) {
+    $errors['phone'] = "Некорректный телефон";
+}
 
-if ($errors) {
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    $errors['email'] = "Некорректный email";
+}
+
+if (!in_array($gender, ['1','2'])) {
+    $errors['gender'] = "Выберите пол";
+}
+
+if (empty($languages)) {
+    $errors['languages'] = "Выберите язык";
+}
+
+if (!$contract) {
+    $errors['contract'] = "Подтвердите контракт";
+}
+
+if (!empty($errors)) {
     setcookie("errors", json_encode($errors), 0, "/");
-    setcookie("values", json_encode($_POST), 0, "/");
+    setcookie("values", json_encode($values), 0, "/");
+
     header("Location: index.php");
     exit();
 }
 
-/* если пользователь есть */
+// база
+$pdo = new PDO(
+    'mysql:host=localhost;dbname=u82377',
+    'u82377',
+    '4d$TFWRr3'
+);
+
+// обновление авторизованного
 if (isset($_SESSION['user_id'])) {
 
     $stmt = $pdo->prepare("
@@ -47,15 +62,19 @@ if (isset($_SESSION['user_id'])) {
         WHERE id=?
     ");
 
+    if (empty($birthdate)) {
+        $birthdate = null;
+    }
     $stmt->execute([
-        $fio, $phone, $email, $birthdate,
-        $gender, $biography, $contract ? 1 : 0,
+        $fio, $phone, $email, $birthdate, $gender,
+        $biography, $contract ? 1 : 0,
         $_SESSION['user_id']
     ]);
 
 } else {
 
-    $login = "user" . random_int(1000, 9999);
+    // генерация user
+    $login = "user" . rand(1000,9999);
     $password = bin2hex(random_bytes(4));
     $hash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -71,13 +90,25 @@ if (isset($_SESSION['user_id'])) {
         $login, $hash
     ]);
 
-    $id = $pdo->lastInsertId();
+    $app_id = $pdo->lastInsertId();
 
-    $_SESSION['user_id'] = $id;
-
-    /* ВОТ ЭТО ГЛАВНОЕ — теперь логин всегда показывается */
+    // сохранение логин/пароль
     $_SESSION['generated_login'] = $login;
     $_SESSION['generated_password'] = $password;
+
+    $_SESSION['user_id'] = $app_id;
+}
+
+$pdo->prepare("DELETE FROM application_language WHERE application_id=?")
+    ->execute([$_SESSION['user_id']]);
+
+$stmtLang = $pdo->prepare("
+    INSERT INTO application_language (application_id, language_id)
+    VALUES (?, ?)
+");
+
+foreach ($languages as $lang) {
+    $stmtLang->execute([$_SESSION['user_id'], $lang]);
 }
 
 setcookie("success", "1", 0, "/");
